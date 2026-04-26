@@ -457,19 +457,25 @@
     }
 
     .confetti-burst {
-      min-height: 110px;
-      border-style: solid;
-      border-color: rgba(143, 195, 74, 0.35);
+      position: fixed;
+      inset: 0;
+      min-height: 100vh;
+      border: none;
+      border-radius: 0;
       background:
-        radial-gradient(circle at 10% 20%, rgba(226, 200, 77, 0.95) 0 6px, transparent 7px),
-        radial-gradient(circle at 25% 75%, rgba(143, 195, 74, 0.95) 0 6px, transparent 7px),
-        radial-gradient(circle at 45% 25%, rgba(255, 160, 90, 0.95) 0 5px, transparent 6px),
-        radial-gradient(circle at 60% 70%, rgba(255, 220, 120, 0.95) 0 6px, transparent 7px),
-        radial-gradient(circle at 82% 28%, rgba(143, 195, 74, 0.95) 0 5px, transparent 6px),
-        radial-gradient(circle at 90% 78%, rgba(226, 200, 77, 0.95) 0 6px, transparent 7px),
-        linear-gradient(135deg, rgba(252, 247, 190, 0.92), rgba(220, 240, 170, 0.92));
-      position: relative;
+        radial-gradient(circle at 8% 18%, rgba(226, 200, 77, 1) 0 14px, transparent 15px),
+        radial-gradient(circle at 18% 72%, rgba(143, 195, 74, 1) 0 13px, transparent 14px),
+        radial-gradient(circle at 28% 28%, rgba(255, 160, 90, 1) 0 12px, transparent 13px),
+        radial-gradient(circle at 42% 78%, rgba(255, 220, 120, 1) 0 14px, transparent 15px),
+        radial-gradient(circle at 56% 20%, rgba(143, 195, 74, 1) 0 12px, transparent 13px),
+        radial-gradient(circle at 68% 68%, rgba(226, 200, 77, 1) 0 14px, transparent 15px),
+        radial-gradient(circle at 79% 25%, rgba(255, 160, 90, 1) 0 12px, transparent 13px),
+        radial-gradient(circle at 90% 76%, rgba(143, 195, 74, 1) 0 14px, transparent 15px),
+        linear-gradient(135deg, rgba(252, 247, 190, 0.22), rgba(220, 240, 170, 0.16));
       overflow: hidden;
+      pointer-events: none;
+      z-index: 9999;
+      box-shadow: inset 0 0 120px rgba(255, 255, 255, 0.2);
     }
 
     .confetti-burst::before,
@@ -478,35 +484,43 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at 18% 60%, rgba(255, 255, 255, 0.9) 0 4px, transparent 5px),
-        radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.85) 0 3px, transparent 4px),
-        radial-gradient(circle at 68% 55%, rgba(255, 255, 255, 0.85) 0 4px, transparent 5px),
-        radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.9) 0 3px, transparent 4px);
+        radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.95) 0 10px, transparent 11px),
+        radial-gradient(circle at 24% 58%, rgba(255, 255, 255, 0.9) 0 9px, transparent 10px),
+        radial-gradient(circle at 37% 34%, rgba(255, 255, 255, 0.92) 0 8px, transparent 9px),
+        radial-gradient(circle at 52% 82%, rgba(255, 255, 255, 0.88) 0 9px, transparent 10px),
+        radial-gradient(circle at 66% 40%, rgba(255, 255, 255, 0.92) 0 10px, transparent 11px),
+        radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.95) 0 8px, transparent 9px),
+        radial-gradient(circle at 88% 64%, rgba(255, 255, 255, 0.9) 0 10px, transparent 11px);
       opacity: 0;
     }
 
     .confetti-burst.active::before {
-      animation: confetti-pop 900ms ease-out forwards;
+      animation: confetti-pop 1400ms ease-out forwards;
     }
 
     .confetti-burst.active::after {
-      animation: confetti-pop 1200ms ease-out 120ms forwards;
+      animation: confetti-pop 1800ms ease-out 120ms forwards;
     }
 
     @keyframes confetti-pop {
       0% {
         opacity: 0;
-        transform: scale(0.92) translateY(8px);
+        transform: scale(0.86) translateY(40px) rotate(0deg);
       }
 
-      20% {
+      15% {
         opacity: 1;
       }
 
       100% {
         opacity: 0;
-        transform: scale(1.04) translateY(-14px);
+        transform: scale(1.15) translateY(-110px) rotate(10deg);
       }
+    }
+
+    .choice-highlight {
+      border-color: rgba(143, 195, 74, 0.55) !important;
+      box-shadow: 0 0 0 4px rgba(143, 195, 74, 0.2), 0 0 28px rgba(143, 195, 74, 0.18) !important;
     }
 
     .result-banner {
@@ -805,7 +819,8 @@
       supabase: null,
       isBusy: false,
       isAdmin: false,
-      selectedSide: "pink"
+      selectedSide: "pink",
+      celebrationTimer: null
     };
 
     function loadWallet() {
@@ -869,6 +884,10 @@
       els.positionBlue.textContent = wallet.vote === "blue" ? "Chosen" : "-";
       els.pinkShares.textContent = wallet.vote === "pink" ? "1" : "0";
       els.blueShares.textContent = wallet.vote === "blue" ? "1" : "0";
+      els.betPinkBtn.classList.toggle("choice-highlight", wallet.vote === "pink");
+      els.betBlueBtn.classList.toggle("choice-highlight", wallet.vote === "blue");
+      els.positionPink.parentElement.classList.toggle("choice-highlight", wallet.vote === "pink");
+      els.positionBlue.parentElement.classList.toggle("choice-highlight", wallet.vote === "blue");
       updateTradeEstimates();
     }
 
@@ -895,6 +914,11 @@
     }
 
     function renderReveal() {
+      if (state.celebrationTimer) {
+        clearTimeout(state.celebrationTimer);
+        state.celebrationTimer = null;
+      }
+
       if (!state.market?.revealed || !state.market?.winner) {
         els.resultBanner.classList.remove("visible");
         els.celebrationBox.classList.add("hidden");
@@ -912,6 +936,11 @@
         void els.celebrationBox.offsetWidth;
         els.celebrationBox.classList.remove("hidden");
         els.celebrationBox.classList.add("active");
+        state.celebrationTimer = setTimeout(() => {
+          els.celebrationBox.classList.add("hidden");
+          els.celebrationBox.classList.remove("active");
+          state.celebrationTimer = null;
+        }, 2200);
       } else {
         els.celebrationBox.classList.add("hidden");
         els.celebrationBox.classList.remove("active");
