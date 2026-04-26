@@ -289,10 +289,6 @@
       padding: 22px;
     }
 
-    .quick-card {
-      padding: 20px 22px;
-    }
-
     .details-wrap {
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -366,12 +362,6 @@
       width: 100%;
       accent-color: var(--blue);
       cursor: pointer;
-    }
-
-    .quick-stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
     }
 
     button,
@@ -466,6 +456,59 @@
       line-height: 1.45;
     }
 
+    .confetti-burst {
+      min-height: 110px;
+      border-style: solid;
+      border-color: rgba(143, 195, 74, 0.35);
+      background:
+        radial-gradient(circle at 10% 20%, rgba(226, 200, 77, 0.95) 0 6px, transparent 7px),
+        radial-gradient(circle at 25% 75%, rgba(143, 195, 74, 0.95) 0 6px, transparent 7px),
+        radial-gradient(circle at 45% 25%, rgba(255, 160, 90, 0.95) 0 5px, transparent 6px),
+        radial-gradient(circle at 60% 70%, rgba(255, 220, 120, 0.95) 0 6px, transparent 7px),
+        radial-gradient(circle at 82% 28%, rgba(143, 195, 74, 0.95) 0 5px, transparent 6px),
+        radial-gradient(circle at 90% 78%, rgba(226, 200, 77, 0.95) 0 6px, transparent 7px),
+        linear-gradient(135deg, rgba(252, 247, 190, 0.92), rgba(220, 240, 170, 0.92));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .confetti-burst::before,
+    .confetti-burst::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 60%, rgba(255, 255, 255, 0.9) 0 4px, transparent 5px),
+        radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 68% 55%, rgba(255, 255, 255, 0.85) 0 4px, transparent 5px),
+        radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.9) 0 3px, transparent 4px);
+      opacity: 0;
+    }
+
+    .confetti-burst.active::before {
+      animation: confetti-pop 900ms ease-out forwards;
+    }
+
+    .confetti-burst.active::after {
+      animation: confetti-pop 1200ms ease-out 120ms forwards;
+    }
+
+    @keyframes confetti-pop {
+      0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(8px);
+      }
+
+      20% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1.04) translateY(-14px);
+      }
+    }
+
     .result-banner {
       display: none;
       padding: 20px 22px;
@@ -535,7 +578,6 @@
       }
 
       .market-grid,
-      .quick-stats,
       .stats-grid,
       .position-row,
       .admin-actions,
@@ -543,7 +585,6 @@
         grid-template-columns: 1fr;
       }
 
-      .quick-card,
       .trade-card,
       .market-card {
         padding: 18px;
@@ -599,20 +640,6 @@
 
     <section class="dashboard">
       <div class="left-col">
-        <article class="card quick-card">
-          <h2 class="section-title">Quick Play</h2>
-          <div class="quick-stats">
-            <div class="stat-box">
-              <div class="label">Your Vote</div>
-              <div class="value" id="quickBalance">None</div>
-            </div>
-            <div class="stat-box">
-              <div class="label">Status</div>
-              <div class="value" id="possibleWin">Open</div>
-            </div>
-          </div>
-        </article>
-
         <article class="card trade-card">
           <div class="trade-controls">
             <div class="trade-header">
@@ -627,7 +654,7 @@
             </div>
 
             <div class="simple-note" id="tradeHint">Tap once to lock your vote.</div>
-            <div class="simple-note hidden" id="celebrationBox"></div>
+            <div class="simple-note confetti-burst hidden" id="celebrationBox" aria-hidden="true"></div>
           </div>
         </article>
       </div>
@@ -751,8 +778,6 @@
       blueShares: document.getElementById("blueShares"),
       userBalance: document.getElementById("userBalance"),
       totalShares: document.getElementById("totalShares"),
-      quickBalance: document.getElementById("quickBalance"),
-      possibleWin: document.getElementById("possibleWin"),
       positionPink: document.getElementById("positionPink"),
       positionBlue: document.getElementById("positionBlue"),
       tradeHint: document.getElementById("tradeHint"),
@@ -832,7 +857,6 @@
 
     function updateTradeEstimates() {
       els.tradeHint.textContent = state.wallet.locked ? "Your vote is locked." : "Tap once to lock your vote.";
-      els.possibleWin.textContent = state.wallet.locked ? "Locked" : "Open";
       els.betPinkBtn.classList.toggle("active", state.selectedSide === "pink");
       els.betBlueBtn.classList.toggle("active", state.selectedSide === "blue");
     }
@@ -840,7 +864,6 @@
     function renderWallet() {
       const wallet = state.wallet;
       els.userBalance.textContent = wallet.vote ? sideLabel(wallet.vote) : "None";
-      els.quickBalance.textContent = wallet.vote ? sideLabel(wallet.vote) : "None";
       els.totalShares.textContent = wallet.locked ? "Yes" : "No";
       els.positionPink.textContent = wallet.vote === "pink" ? "Chosen" : "-";
       els.positionBlue.textContent = wallet.vote === "blue" ? "Chosen" : "-";
@@ -875,6 +898,7 @@
       if (!state.market?.revealed || !state.market?.winner) {
         els.resultBanner.classList.remove("visible");
         els.celebrationBox.classList.add("hidden");
+        els.celebrationBox.classList.remove("active");
         return;
       }
 
@@ -883,11 +907,14 @@
       els.resultMessage.textContent = state.market.announcement || ("Congratulations to Team " + winner + ".");
       els.resultBanner.classList.add("visible");
       if (state.wallet.vote === state.market.winner) {
-        els.celebrationBox.textContent = "You guessed correctly!";
         els.celebrationBox.classList.remove("hidden");
-      } else if (state.wallet.vote) {
-        els.celebrationBox.textContent = "You guessed " + sideLabel(state.wallet.vote) + ".";
+        els.celebrationBox.classList.remove("active");
+        void els.celebrationBox.offsetWidth;
         els.celebrationBox.classList.remove("hidden");
+        els.celebrationBox.classList.add("active");
+      } else {
+        els.celebrationBox.classList.add("hidden");
+        els.celebrationBox.classList.remove("active");
       }
     }
 
