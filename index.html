@@ -293,6 +293,42 @@
       padding: 20px 22px;
     }
 
+    .details-wrap {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .details-wrap summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 18px 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .details-wrap summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .details-wrap summary::after {
+      content: "+";
+      float: right;
+      color: var(--muted);
+    }
+
+    .details-wrap[open] summary::after {
+      content: "-";
+    }
+
+    .details-body {
+      padding: 0 18px 18px;
+      display: grid;
+      gap: 18px;
+    }
+
     .section-title {
       margin: 0 0 14px;
       font-size: 1rem;
@@ -532,9 +568,16 @@
 
       .quick-card,
       .trade-card,
-      .wallet-card,
       .market-card {
         padding: 18px;
+      }
+
+      .details-wrap summary {
+        padding: 16px 18px;
+      }
+
+      .details-body {
+        padding: 0 16px 16px;
       }
 
       .action-btn {
@@ -552,9 +595,8 @@
   <div class="shell">
     <section class="topbar">
       <div class="brand">
-        <div class="eyebrow">Live Baby Reveal Game</div>
-        <h1>Baby Guess Board</h1>
-        <div class="subline">Cute, simple, and live for everyone watching.</div>
+        <div class="eyebrow">Baby Reveal</div>
+        <h1>Guess Board</h1>
       </div>
       <div class="status-pill" id="connectionStatus">Connecting to Supabase...</div>
     </section>
@@ -566,10 +608,7 @@
 
     <section class="card gauge-card">
       <div class="gauge-head">
-        <div>
-          <div class="section-title" style="margin-bottom: 6px;">Live Guess Meter</div>
-          <div class="muted">A quick view of where the crowd is leaning right now.</div>
-        </div>
+        <div class="section-title" style="margin-bottom: 0;">Live Meter</div>
       </div>
       <div class="gauge-track" aria-label="Live odds gauge">
         <div class="gauge-fill girl" id="girlGauge" style="width: 50%;"></div>
@@ -587,70 +626,25 @@
           <h2 class="section-title">Quick Play</h2>
           <div class="quick-stats">
             <div class="stat-box">
-              <div class="label">My Balance</div>
+              <div class="label">Balance</div>
               <div class="value" id="quickBalance">$120.00</div>
             </div>
             <div class="stat-box">
-              <div class="label">Possible Win</div>
+              <div class="label">Win</div>
               <div class="value" id="possibleWin">$0.00</div>
             </div>
             <div class="stat-box">
-              <div class="label">Current Pick</div>
+              <div class="label">Pick</div>
               <div class="value" id="currentPick">Girl</div>
             </div>
           </div>
         </article>
 
-        <div class="market-grid">
-          <article class="card market-card pink">
-            <header>
-              <div>
-                <div class="tag">Girl</div>
-                <div class="subline">Market price</div>
-              </div>
-              <div class="accent" id="pinkMomentum">Trending</div>
-            </header>
-            <div class="price" id="pinkPrice">$0.50</div>
-            <div class="pool-grid">
-              <div class="mini-stat">
-                <div class="label">Girl Odds Pool</div>
-                <div class="value" id="pinkPool">500.00</div>
-              </div>
-              <div class="mini-stat">
-                <div class="label">Your Girl Tickets</div>
-                <div class="value" id="pinkShares">0</div>
-              </div>
-            </div>
-          </article>
-
-          <article class="card market-card blue">
-            <header>
-              <div>
-                <div class="tag">Boy</div>
-                <div class="subline">Market price</div>
-              </div>
-              <div class="accent" id="blueMomentum">Trending</div>
-            </header>
-            <div class="price" id="bluePrice">$0.50</div>
-            <div class="pool-grid">
-              <div class="mini-stat">
-                <div class="label">Boy Odds Pool</div>
-                <div class="value" id="bluePool">500.00</div>
-              </div>
-              <div class="mini-stat">
-                <div class="label">Your Boy Tickets</div>
-                <div class="value" id="blueShares">0</div>
-              </div>
-            </div>
-          </article>
-        </div>
-
         <article class="card trade-card">
           <div class="trade-controls">
             <div class="trade-header">
               <div>
-                <h2 class="section-title">Make A Guess</h2>
-                <div class="muted">Fast round: most guests make 1 to 3 guesses.</div>
+                <h2 class="section-title">Pick A Side</h2>
               </div>
               <div class="value" id="betAmountLabel">$20</div>
             </div>
@@ -665,51 +659,96 @@
             </div>
 
             <div class="action-grid">
-              <button class="action-btn pink" id="betPinkBtn">Guess Girl<span>Tap to back Girl</span></button>
-              <button class="action-btn blue" id="betBlueBtn">Guess Boy<span>Tap to back Boy</span></button>
+              <button class="action-btn pink" id="betPinkBtn">Girl</button>
+              <button class="action-btn blue" id="betBlueBtn">Boy</button>
             </div>
 
-            <div class="simple-note" id="tradeHint">Every guess nudges the live odds for everyone watching.</div>
+            <div class="simple-note" id="tradeHint">Choose an amount and tap a side.</div>
           </div>
         </article>
       </div>
 
       <div class="right-col">
-        <article class="card wallet-card">
-          <h2 class="section-title">Your Tickets</h2>
-          <div class="stats-grid">
-            <div class="stat-box">
-              <div class="label">Virtual Balance</div>
-              <div class="value" id="userBalance">$120.00</div>
+        <details class="details-wrap">
+          <summary>Details</summary>
+          <div class="details-body">
+            <div class="market-grid">
+              <article class="card market-card pink">
+                <header>
+                  <div>
+                    <div class="tag">Girl</div>
+                  </div>
+                  <div class="accent" id="pinkMomentum">Trending</div>
+                </header>
+                <div class="price" id="pinkPrice">$0.50</div>
+                <div class="pool-grid">
+                  <div class="mini-stat">
+                    <div class="label">Pool</div>
+                    <div class="value" id="pinkPool">500.00</div>
+                  </div>
+                  <div class="mini-stat">
+                    <div class="label">Tickets</div>
+                    <div class="value" id="pinkShares">0</div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="card market-card blue">
+                <header>
+                  <div>
+                    <div class="tag">Boy</div>
+                  </div>
+                  <div class="accent" id="blueMomentum">Trending</div>
+                </header>
+                <div class="price" id="bluePrice">$0.50</div>
+                <div class="pool-grid">
+                  <div class="mini-stat">
+                    <div class="label">Pool</div>
+                    <div class="value" id="bluePool">500.00</div>
+                  </div>
+                  <div class="mini-stat">
+                    <div class="label">Tickets</div>
+                    <div class="value" id="blueShares">0</div>
+                  </div>
+                </div>
+              </article>
             </div>
-            <div class="stat-box">
-              <div class="label">Total Tickets</div>
-              <div class="value" id="totalShares">0</div>
-            </div>
+
+            <article class="card wallet-card">
+              <h2 class="section-title">Your Tickets</h2>
+              <div class="stats-grid">
+                <div class="stat-box">
+                  <div class="label">Balance</div>
+                  <div class="value" id="userBalance">$120.00</div>
+                </div>
+                <div class="stat-box">
+                  <div class="label">Total</div>
+                  <div class="value" id="totalShares">0</div>
+                </div>
+              </div>
+              <div class="position-row" style="margin-top: 14px;">
+                <div class="position-box">
+                  <div class="label">Girl</div>
+                  <div class="value" id="positionPink">0</div>
+                </div>
+                <div class="position-box">
+                  <div class="label">Boy</div>
+                  <div class="value" id="positionBlue">0</div>
+                </div>
+              </div>
+            </article>
           </div>
-          <div class="position-row" style="margin-top: 14px;">
-            <div class="position-box">
-              <div class="label">Girl Tickets</div>
-              <div class="value" id="positionPink">0</div>
-            </div>
-            <div class="position-box">
-              <div class="label">Boy Tickets</div>
-              <div class="value" id="positionBlue">0</div>
-            </div>
-          </div>
-          <div class="simple-note" style="margin-top: 14px;">Each ticket pays $1 if that color wins. Your balance and tickets stay on this device.</div>
-        </article>
+        </details>
       </div>
     </section>
 
     <section class="admin-panel">
       <div class="terminal-line">
         <strong>Admin Reveal Console</strong>
-        <span>Hidden behind a simple passcode prompt.</span>
+        <span>Admin only.</span>
       </div>
       <div class="admin-gate" id="adminGate">
         <button class="admin-btn" id="adminUnlockBtn">Unlock Admin</button>
-        <div class="muted">For light protection only. This is client-side, not real secure auth.</div>
       </div>
       <div id="adminControls" class="hidden">
         <div class="admin-actions">
@@ -718,7 +757,6 @@
           <button class="admin-btn" id="resetMarketBtn">Reset Shared Market</button>
           <button class="admin-btn" id="resetWalletBtn">Reset My Wallet</button>
         </div>
-        <div class="muted">Reset Shared Market updates Supabase for everyone. Reset My Wallet only clears this browser.</div>
       </div>
     </section>
 
