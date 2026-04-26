@@ -6,23 +6,23 @@
   <title>Gender Reveal Prediction Market</title>
   <style>
     :root {
-      --bg: #f3e7f2;
-      --bg-soft: #ecdff0;
-      --panel: rgba(242, 229, 239, 0.9);
-      --panel-strong: rgba(236, 223, 236, 0.96);
-      --border: rgba(188, 154, 184, 0.52);
-      --text: #5e4660;
-      --muted: #987e98;
-      --pink: #b795ea;
-      --pink-soft: rgba(183, 149, 234, 0.2);
-      --blue: #8fd8b8;
-      --blue-soft: rgba(143, 216, 184, 0.22);
+      --bg: #f6f1d7;
+      --bg-soft: #efe7c1;
+      --panel: rgba(243, 237, 209, 0.9);
+      --panel-strong: rgba(237, 232, 200, 0.96);
+      --border: rgba(177, 170, 112, 0.45);
+      --text: #5b5630;
+      --muted: #8b8559;
+      --pink: #e2c84d;
+      --pink-soft: rgba(226, 200, 77, 0.22);
+      --blue: #8fc34a;
+      --blue-soft: rgba(143, 195, 74, 0.24);
       --success: #54d59f;
       --danger: #ff7c9c;
-      --glow: 0 0 18px rgba(139, 187, 231, 0.16), 0 0 12px rgba(234, 138, 185, 0.14);
+      --glow: 0 0 18px rgba(143, 195, 74, 0.14), 0 0 12px rgba(226, 200, 77, 0.14);
       --radius: 22px;
       --radius-sm: 16px;
-      --shadow: 0 18px 42px rgba(151, 117, 151, 0.18);
+      --shadow: 0 18px 42px rgba(122, 116, 63, 0.16);
     }
 
     * {
@@ -33,10 +33,10 @@
       margin: 0;
       min-height: 100%;
       background:
-        radial-gradient(circle at top left, rgba(183, 149, 234, 0.24), transparent 36%),
-        radial-gradient(circle at top right, rgba(143, 216, 184, 0.24), transparent 36%),
-        radial-gradient(circle at bottom center, rgba(226, 208, 233, 0.82), transparent 46%),
-        linear-gradient(180deg, #f7eef7 0%, #efe3ef 52%, #e5eef7 100%);
+        radial-gradient(circle at top left, rgba(226, 200, 77, 0.24), transparent 36%),
+        radial-gradient(circle at top right, rgba(143, 195, 74, 0.24), transparent 36%),
+        radial-gradient(circle at bottom center, rgba(233, 229, 182, 0.82), transparent 46%),
+        linear-gradient(180deg, #f8f4df 0%, #f1ebca 52%, #e6efd5 100%);
       color: var(--text);
       font-family: "Trebuchet MS", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     }
@@ -104,7 +104,7 @@
       border: 1px solid var(--border);
       color: var(--muted);
       white-space: nowrap;
-      background: rgba(245, 236, 244, 0.82);
+      background: rgba(244, 239, 212, 0.84);
     }
 
     .dashboard,
@@ -118,6 +118,71 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 18px;
+    }
+
+    .gauge-card {
+      padding: 18px 20px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .gauge-head,
+    .gauge-legend {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .gauge-track {
+      width: 100%;
+      height: 22px;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgba(235, 231, 197, 0.88);
+      display: flex;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      transition: width 0.25s ease;
+    }
+
+    .gauge-fill.girl {
+      background: linear-gradient(90deg, rgba(226, 200, 77, 0.95), rgba(239, 225, 132, 0.95));
+    }
+
+    .gauge-fill.boy {
+      background: linear-gradient(90deg, rgba(143, 195, 74, 0.95), rgba(190, 223, 132, 0.95));
+    }
+
+    .legend-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(240, 234, 202, 0.78);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .legend-dot.girl {
+      background: var(--pink);
+    }
+
+    .legend-dot.boy {
+      background: var(--blue);
     }
 
     .market-card {
@@ -161,7 +226,7 @@
       letter-spacing: 0.14em;
       text-transform: uppercase;
       border: 1px solid currentColor;
-      background: rgba(248, 239, 246, 0.72);
+      background: rgba(248, 242, 215, 0.74);
     }
 
     .pink .tag,
@@ -202,7 +267,7 @@
     .position-box {
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background: rgba(244, 234, 242, 0.78);
+      background: rgba(241, 236, 205, 0.8);
       padding: 14px 16px;
     }
 
@@ -280,7 +345,7 @@
     .admin-btn {
       border: 1px solid var(--border);
       color: var(--text);
-      background: rgba(242, 231, 240, 0.82);
+      background: rgba(240, 234, 201, 0.84);
       border-radius: 14px;
       cursor: pointer;
       transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
@@ -308,28 +373,28 @@
     }
 
     .action-btn.pink {
-      border-color: rgba(183, 149, 234, 0.42);
-      background: linear-gradient(180deg, rgba(223, 205, 248, 0.92), rgba(235, 224, 246, 0.97));
-      box-shadow: 0 10px 22px rgba(183, 149, 234, 0.15);
+      border-color: rgba(226, 200, 77, 0.46);
+      background: linear-gradient(180deg, rgba(243, 231, 154, 0.94), rgba(245, 238, 189, 0.98));
+      box-shadow: 0 10px 22px rgba(226, 200, 77, 0.16);
     }
 
     .action-btn.blue {
-      border-color: rgba(143, 216, 184, 0.45);
-      background: linear-gradient(180deg, rgba(205, 240, 224, 0.92), rgba(223, 241, 233, 0.97));
-      box-shadow: 0 10px 22px rgba(143, 216, 184, 0.16);
+      border-color: rgba(143, 195, 74, 0.46);
+      background: linear-gradient(180deg, rgba(208, 232, 166, 0.94), rgba(229, 241, 200, 0.98));
+      box-shadow: 0 10px 22px rgba(143, 195, 74, 0.16);
     }
 
     .chip:hover,
     .action-btn:hover,
     .admin-btn:hover {
       transform: translateY(-1px);
-      border-color: rgba(212, 160, 192, 0.52);
+      border-color: rgba(177, 170, 112, 0.56);
     }
 
     .chip.active {
-      border-color: rgba(143, 216, 184, 0.5);
+      border-color: rgba(143, 195, 74, 0.5);
       color: var(--blue);
-      background: rgba(143, 216, 184, 0.18);
+      background: rgba(143, 195, 74, 0.16);
     }
 
     .action-btn:disabled,
@@ -347,7 +412,7 @@
     .simple-note {
       border: 1px dashed var(--border);
       border-radius: var(--radius-sm);
-      background: rgba(239, 228, 237, 0.78);
+      background: rgba(236, 231, 196, 0.8);
       padding: 14px 16px;
       color: var(--muted);
       font-size: 0.95rem;
@@ -358,7 +423,7 @@
       display: none;
       padding: 20px 22px;
       border-left: 4px solid var(--success);
-      background: linear-gradient(90deg, rgba(207, 233, 216, 0.92), rgba(237, 230, 237, 0.88));
+      background: linear-gradient(90deg, rgba(219, 234, 181, 0.92), rgba(240, 234, 202, 0.88));
     }
 
     .result-banner.visible {
@@ -450,6 +515,23 @@
     <section class="result-banner" id="resultBanner">
       <h2 id="resultTitle">Reveal locked in</h2>
       <div id="resultMessage" class="muted"></div>
+    </section>
+
+    <section class="card gauge-card">
+      <div class="gauge-head">
+        <div>
+          <div class="section-title" style="margin-bottom: 6px;">Live Guess Meter</div>
+          <div class="muted">A quick view of where the crowd is leaning right now.</div>
+        </div>
+      </div>
+      <div class="gauge-track" aria-label="Live odds gauge">
+        <div class="gauge-fill girl" id="girlGauge" style="width: 50%;"></div>
+        <div class="gauge-fill boy" id="boyGauge" style="width: 50%;"></div>
+      </div>
+      <div class="gauge-legend">
+        <div class="legend-pill"><span class="legend-dot girl"></span>Girl <strong id="girlGaugeLabel">50%</strong></div>
+        <div class="legend-pill"><span class="legend-dot boy"></span>Boy <strong id="boyGaugeLabel">50%</strong></div>
+      </div>
     </section>
 
     <section class="dashboard">
@@ -592,6 +674,10 @@
       connectionStatus: document.getElementById("connectionStatus"),
       pinkPrice: document.getElementById("pinkPrice"),
       bluePrice: document.getElementById("bluePrice"),
+      girlGauge: document.getElementById("girlGauge"),
+      boyGauge: document.getElementById("boyGauge"),
+      girlGaugeLabel: document.getElementById("girlGaugeLabel"),
+      boyGaugeLabel: document.getElementById("boyGaugeLabel"),
       pinkPool: document.getElementById("pinkPool"),
       bluePool: document.getElementById("bluePool"),
       pinkShares: document.getElementById("pinkShares"),
@@ -712,6 +798,10 @@
       const prices = getPrices(state.market);
       els.pinkPrice.textContent = formatCurrency(prices.pink);
       els.bluePrice.textContent = formatCurrency(prices.blue);
+      els.girlGauge.style.width = (prices.pink * 100).toFixed(1) + "%";
+      els.boyGauge.style.width = (prices.blue * 100).toFixed(1) + "%";
+      els.girlGaugeLabel.textContent = Math.round(prices.pink * 100) + "%";
+      els.boyGaugeLabel.textContent = Math.round(prices.blue * 100) + "%";
       els.pinkPool.textContent = Number(state.market.pink_pool).toFixed(2);
       els.bluePool.textContent = Number(state.market.blue_pool).toFixed(2);
       els.pinkMomentum.textContent = prices.pink >= 0.5 ? "Trending" : "Quiet";
