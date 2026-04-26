@@ -603,12 +603,12 @@
           <h2 class="section-title">Quick Play</h2>
           <div class="quick-stats">
             <div class="stat-box">
-              <div class="label">Balance</div>
-              <div class="value" id="quickBalance">$120.00</div>
+              <div class="label">Your Vote</div>
+              <div class="value" id="quickBalance">None</div>
             </div>
             <div class="stat-box">
-              <div class="label">Win</div>
-              <div class="value" id="possibleWin">$0.00</div>
+              <div class="label">Status</div>
+              <div class="value" id="possibleWin">Open</div>
             </div>
           </div>
         </article>
@@ -619,11 +619,6 @@
               <div>
                 <h2 class="section-title">Choose A Side</h2>
               </div>
-              <div class="value" id="betAmountLabel">$20</div>
-            </div>
-
-            <div class="amount-wrap">
-              <input id="betAmount" type="range" min="10" max="60" step="10" value="20">
             </div>
 
             <div class="action-grid">
@@ -631,7 +626,8 @@
               <button class="action-btn blue" id="betBlueBtn">Boy</button>
             </div>
 
-            <div class="simple-note" id="tradeHint">Move the slider, then tap a side.</div>
+            <div class="simple-note" id="tradeHint">Tap once to lock your vote.</div>
+            <div class="simple-note hidden" id="celebrationBox"></div>
           </div>
         </article>
       </div>
@@ -655,7 +651,7 @@
                     <div class="value" id="pinkPool">500.00</div>
                   </div>
                   <div class="mini-stat">
-                    <div class="label">Tickets</div>
+                    <div class="label">Votes</div>
                     <div class="value" id="pinkShares">0</div>
                   </div>
                 </div>
@@ -675,7 +671,7 @@
                     <div class="value" id="bluePool">500.00</div>
                   </div>
                   <div class="mini-stat">
-                    <div class="label">Tickets</div>
+                    <div class="label">Votes</div>
                     <div class="value" id="blueShares">0</div>
                   </div>
                 </div>
@@ -683,25 +679,25 @@
             </div>
 
             <article class="card wallet-card">
-              <h2 class="section-title">Your Tickets</h2>
+              <h2 class="section-title">Your Vote</h2>
               <div class="stats-grid">
                 <div class="stat-box">
-                  <div class="label">Balance</div>
-                  <div class="value" id="userBalance">$120.00</div>
+                  <div class="label">Choice</div>
+                  <div class="value" id="userBalance">None</div>
                 </div>
                 <div class="stat-box">
-                  <div class="label">Total</div>
-                  <div class="value" id="totalShares">0</div>
+                  <div class="label">Locked</div>
+                  <div class="value" id="totalShares">No</div>
                 </div>
               </div>
               <div class="position-row" style="margin-top: 14px;">
                 <div class="position-box">
                   <div class="label">Girl</div>
-                  <div class="value" id="positionPink">0</div>
+                  <div class="value" id="positionPink">-</div>
                 </div>
                 <div class="position-box">
                   <div class="label">Boy</div>
-                  <div class="value" id="positionBlue">0</div>
+                  <div class="value" id="positionBlue">-</div>
                 </div>
               </div>
             </article>
@@ -723,7 +719,7 @@
           <button class="admin-btn" id="revealPinkBtn">Reveal Girl Winner</button>
           <button class="admin-btn" id="revealBlueBtn">Reveal Boy Winner</button>
           <button class="admin-btn" id="resetMarketBtn">Reset Shared Market</button>
-          <button class="admin-btn" id="resetWalletBtn">Reset My Wallet</button>
+          <button class="admin-btn" id="resetWalletBtn">Reset My Vote</button>
         </div>
       </div>
     </section>
@@ -737,8 +733,8 @@
     const SUPABASE_ANON_KEY = "sb_publishable_DIejNqBd3o6wIjuxDGWp2A_an9icl7t";
     const ADMIN_PASSCODE = "babylove2026";
     const MARKET_ID = 1;
-    const STORAGE_KEY = "gender-reveal-market-wallet-v1";
-    const DEFAULT_WALLET = { balance: 120, pinkShares: 0, blueShares: 0, history: [] };
+    const STORAGE_KEY = "gender-reveal-market-vote-v3";
+    const DEFAULT_WALLET = { vote: null, locked: false, history: [] };
     const SIDE_LABELS = { pink: "Girl", blue: "Boy" };
 
     const els = {
@@ -759,9 +755,8 @@
       possibleWin: document.getElementById("possibleWin"),
       positionPink: document.getElementById("positionPink"),
       positionBlue: document.getElementById("positionBlue"),
-      betAmount: document.getElementById("betAmount"),
-      betAmountLabel: document.getElementById("betAmountLabel"),
       tradeHint: document.getElementById("tradeHint"),
+      celebrationBox: document.getElementById("celebrationBox"),
       betPinkBtn: document.getElementById("betPinkBtn"),
       betBlueBtn: document.getElementById("betBlueBtn"),
       adminGate: document.getElementById("adminGate"),
@@ -818,7 +813,7 @@
     }
 
     function formatShares(value) {
-      return Number(value || 0).toFixed(2);
+      return Number(value || 0).toFixed(0);
     }
 
     function sideLabel(side) {
@@ -835,40 +830,22 @@
       };
     }
 
-    function estimateTickets(side, amount, market) {
-      if (!market) return 0;
-      const stake = Number(amount || 0);
-      const prices = getPrices(market);
-      const currentPrice = side === "pink" ? prices.pink : prices.blue;
-      if (stake <= 0 || currentPrice <= 0) return 0;
-      return stake / currentPrice;
-    }
-
     function updateTradeEstimates() {
-      const amount = Number(els.betAmount.value);
-      els.betAmountLabel.textContent = formatCurrency(amount);
-      const pinkTickets = formatShares(estimateTickets("pink", amount, state.market));
-      const blueTickets = formatShares(estimateTickets("blue", amount, state.market));
-      els.tradeHint.textContent = formatCurrency(amount) + " buys about " + pinkTickets + " Girl tickets or " + blueTickets + " Boy tickets.";
-      const possibleWin = state.selectedSide === "pink"
-        ? state.wallet.pinkShares + estimateTickets("pink", amount, state.market)
-        : state.wallet.blueShares + estimateTickets("blue", amount, state.market);
-      els.possibleWin.textContent = formatCurrency(possibleWin);
+      els.tradeHint.textContent = state.wallet.locked ? "Your vote is locked." : "Tap once to lock your vote.";
+      els.possibleWin.textContent = state.wallet.locked ? "Locked" : "Open";
       els.betPinkBtn.classList.toggle("active", state.selectedSide === "pink");
       els.betBlueBtn.classList.toggle("active", state.selectedSide === "blue");
-
     }
 
     function renderWallet() {
       const wallet = state.wallet;
-      const totalShares = wallet.pinkShares + wallet.blueShares;
-      els.userBalance.textContent = formatCurrency(wallet.balance);
-      els.quickBalance.textContent = formatCurrency(wallet.balance);
-      els.totalShares.textContent = formatShares(totalShares);
-      els.positionPink.textContent = formatShares(wallet.pinkShares);
-      els.positionBlue.textContent = formatShares(wallet.blueShares);
-      els.pinkShares.textContent = formatShares(wallet.pinkShares);
-      els.blueShares.textContent = formatShares(wallet.blueShares);
+      els.userBalance.textContent = wallet.vote ? sideLabel(wallet.vote) : "None";
+      els.quickBalance.textContent = wallet.vote ? sideLabel(wallet.vote) : "None";
+      els.totalShares.textContent = wallet.locked ? "Yes" : "No";
+      els.positionPink.textContent = wallet.vote === "pink" ? "Chosen" : "-";
+      els.positionBlue.textContent = wallet.vote === "blue" ? "Chosen" : "-";
+      els.pinkShares.textContent = wallet.vote === "pink" ? "1" : "0";
+      els.blueShares.textContent = wallet.vote === "blue" ? "1" : "0";
       updateTradeEstimates();
     }
 
@@ -897,22 +874,26 @@
     function renderReveal() {
       if (!state.market?.revealed || !state.market?.winner) {
         els.resultBanner.classList.remove("visible");
+        els.celebrationBox.classList.add("hidden");
         return;
       }
 
       const winner = sideLabel(String(state.market.winner));
-      const winningTickets = state.market.winner === "pink" ? state.wallet.pinkShares : state.wallet.blueShares;
-      const payout = winningTickets;
       els.resultTitle.textContent = "It's " + winner + "!";
-      els.resultMessage.textContent =
-        (state.market.announcement || ("Congratulations to Team " + winner + ".")) +
-        " Your payout: " + formatCurrency(payout) + ".";
+      els.resultMessage.textContent = state.market.announcement || ("Congratulations to Team " + winner + ".");
       els.resultBanner.classList.add("visible");
+      if (state.wallet.vote === state.market.winner) {
+        els.celebrationBox.textContent = "You guessed correctly!";
+        els.celebrationBox.classList.remove("hidden");
+      } else if (state.wallet.vote) {
+        els.celebrationBox.textContent = "You guessed " + sideLabel(state.wallet.vote) + ".";
+        els.celebrationBox.classList.remove("hidden");
+      }
     }
 
     function setBusy(nextBusy) {
       state.isBusy = nextBusy;
-      const disabled = nextBusy || !state.market || state.market.revealed;
+      const disabled = nextBusy || !state.market || state.market.revealed || state.wallet.locked;
       els.betPinkBtn.disabled = disabled;
       els.betBlueBtn.disabled = disabled;
       els.adminUnlockBtn.disabled = nextBusy;
@@ -935,14 +916,8 @@
     }
 
     async function placeBet(side) {
-      if (!state.market || state.market.revealed) return;
+      if (!state.market || state.market.revealed || state.wallet.locked) return;
       state.selectedSide = side;
-      const amount = Number(els.betAmount.value);
-
-      if (state.wallet.balance < amount) {
-        alert("Insufficient virtual balance for this trade.");
-        return;
-      }
 
       setBusy(true);
 
@@ -950,25 +925,17 @@
         const { data, error } = await state.supabase.rpc("place_market_bet", {
           p_market_id: MARKET_ID,
           p_side: side,
-          p_amount: amount
+          p_amount: 25
         });
 
         if (error) throw error;
 
         const result = Array.isArray(data) ? data[0] : data;
-        const ticketsBought = estimateTickets(side, amount, state.market);
-
-        state.wallet.balance -= amount;
-        if (side === "pink") {
-          state.wallet.pinkShares += ticketsBought;
-        } else {
-          state.wallet.blueShares += ticketsBought;
-        }
+        state.wallet.vote = side;
+        state.wallet.locked = true;
 
         state.wallet.history.unshift({
           side,
-          amount,
-          ticketsBought,
           at: new Date().toISOString()
         });
 
@@ -976,7 +943,7 @@
         renderWallet();
         state.market = result;
         renderMarket();
-        els.tradeHint.textContent = "You bought " + formatShares(ticketsBought) + " " + sideLabel(side) + " tickets for " + formatCurrency(amount) + ".";
+        els.tradeHint.textContent = "You voted for " + sideLabel(side) + ".";
       } catch (error) {
         console.error(error);
         const message = error?.message || "Trade failed. Check Supabase table, RPC, and RLS settings.";
@@ -1044,7 +1011,7 @@
 
         if (error) throw error;
         state.market = data;
-        els.tradeHint.textContent = "Shared market reset to 50/50 for everyone.";
+        els.tradeHint.textContent = "Shared market reset.";
         renderMarket();
       } catch (error) {
         console.error(error);
@@ -1067,12 +1034,10 @@
       state.isAdmin = true;
       renderAdmin();
       setBusy(state.isBusy);
-      els.tradeHint.textContent = "Admin mode unlocked on this device.";
+      els.tradeHint.textContent = "Admin unlocked.";
     }
 
     function bindUI() {
-      els.betAmount.addEventListener("input", updateTradeEstimates);
-
       els.betPinkBtn.addEventListener("click", () => placeBet("pink"));
       els.betBlueBtn.addEventListener("click", () => placeBet("blue"));
       els.betPinkBtn.addEventListener("pointerenter", () => {
@@ -1089,7 +1054,7 @@
       els.resetMarketBtn.addEventListener("click", resetMarket);
       els.resetWalletBtn.addEventListener("click", () => {
         resetLocalWallet();
-        els.tradeHint.textContent = "This browser wallet was reset.";
+        els.tradeHint.textContent = "This device vote was reset.";
       });
     }
 
@@ -1129,7 +1094,7 @@
         SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY"
       ) {
         els.connectionStatus.textContent = "Set Supabase URL and anon key";
-        els.tradeHint.textContent = "Add your Supabase URL and publishable key before going live.";
+        els.tradeHint.textContent = "Add your Supabase URL and publishable key.";
         return;
       }
 
