@@ -289,6 +289,10 @@
       padding: 22px;
     }
 
+    .quick-card {
+      padding: 20px 22px;
+    }
+
     .section-title {
       margin: 0 0 14px;
       font-size: 1rem;
@@ -334,6 +338,12 @@
       gap: 10px;
     }
 
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
     button,
     input,
     select {
@@ -372,6 +382,13 @@
       font-weight: 700;
     }
 
+    .action-btn {
+      min-height: 86px;
+      font-size: 1.08rem;
+      border-radius: 20px;
+      letter-spacing: 0.01em;
+    }
+
     .action-btn.pink {
       border-color: rgba(226, 200, 77, 0.46);
       background: linear-gradient(180deg, rgba(243, 231, 154, 0.94), rgba(245, 238, 189, 0.98));
@@ -395,6 +412,19 @@
       border-color: rgba(143, 195, 74, 0.5);
       color: var(--blue);
       background: rgba(143, 195, 74, 0.16);
+    }
+
+    .action-btn.active {
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28);
+    }
+
+    .action-btn span {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 500;
+      opacity: 0.82;
+      margin-top: 6px;
     }
 
     .action-btn:disabled,
@@ -488,6 +518,7 @@
       }
 
       .market-grid,
+      .quick-stats,
       .stats-grid,
       .position-row,
       .admin-actions,
@@ -497,6 +528,22 @@
 
       .quick-amounts {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .quick-card,
+      .trade-card,
+      .wallet-card,
+      .market-card {
+        padding: 18px;
+      }
+
+      .action-btn {
+        min-height: 102px;
+        font-size: 1.18rem;
+      }
+
+      .trade-header {
+        align-items: flex-start;
       }
     }
   </style>
@@ -536,6 +583,24 @@
 
     <section class="dashboard">
       <div class="left-col">
+        <article class="card quick-card">
+          <h2 class="section-title">Quick Play</h2>
+          <div class="quick-stats">
+            <div class="stat-box">
+              <div class="label">My Balance</div>
+              <div class="value" id="quickBalance">$120.00</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">Possible Win</div>
+              <div class="value" id="possibleWin">$0.00</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">Current Pick</div>
+              <div class="value" id="currentPick">Girl</div>
+            </div>
+          </div>
+        </article>
+
         <div class="market-grid">
           <article class="card market-card pink">
             <header>
@@ -585,23 +650,23 @@
             <div class="trade-header">
               <div>
                 <h2 class="section-title">Make A Guess</h2>
-                <div class="muted">Choose an amount, then tap Girl or Boy.</div>
+                <div class="muted">Fast round: most guests make 1 to 3 guesses.</div>
               </div>
-              <div class="value" id="betAmountLabel">$50</div>
+              <div class="value" id="betAmountLabel">$20</div>
             </div>
 
             <div class="amount-wrap">
-              <input id="betAmount" type="range" min="10" max="200" step="10" value="50">
+              <input id="betAmount" type="range" min="10" max="60" step="10" value="20">
               <div class="quick-amounts">
-                <button class="chip" data-amount="25">$25</button>
-                <button class="chip active" data-amount="50">$50</button>
-                <button class="chip" data-amount="100">$100</button>
+                <button class="chip active" data-amount="20">$20</button>
+                <button class="chip" data-amount="40">$40</button>
+                <button class="chip" data-amount="60">$60</button>
               </div>
             </div>
 
             <div class="action-grid">
-              <button class="action-btn pink" id="betPinkBtn">Guess Girl</button>
-              <button class="action-btn blue" id="betBlueBtn">Guess Boy</button>
+              <button class="action-btn pink" id="betPinkBtn">Guess Girl<span>Tap to back Girl</span></button>
+              <button class="action-btn blue" id="betBlueBtn">Guess Boy<span>Tap to back Boy</span></button>
             </div>
 
             <div class="simple-note" id="tradeHint">Every guess nudges the live odds for everyone watching.</div>
@@ -615,7 +680,7 @@
           <div class="stats-grid">
             <div class="stat-box">
               <div class="label">Virtual Balance</div>
-              <div class="value" id="userBalance">$1,000.00</div>
+              <div class="value" id="userBalance">$120.00</div>
             </div>
             <div class="stat-box">
               <div class="label">Total Tickets</div>
@@ -667,7 +732,7 @@
     const ADMIN_PASSCODE = "babylove2026";
     const MARKET_ID = 1;
     const STORAGE_KEY = "gender-reveal-market-wallet-v1";
-    const DEFAULT_WALLET = { balance: 1000, pinkShares: 0, blueShares: 0, history: [] };
+    const DEFAULT_WALLET = { balance: 120, pinkShares: 0, blueShares: 0, history: [] };
     const SIDE_LABELS = { pink: "Girl", blue: "Boy" };
 
     const els = {
@@ -684,6 +749,9 @@
       blueShares: document.getElementById("blueShares"),
       userBalance: document.getElementById("userBalance"),
       totalShares: document.getElementById("totalShares"),
+      quickBalance: document.getElementById("quickBalance"),
+      possibleWin: document.getElementById("possibleWin"),
+      currentPick: document.getElementById("currentPick"),
       positionPink: document.getElementById("positionPink"),
       positionBlue: document.getElementById("positionBlue"),
       betAmount: document.getElementById("betAmount"),
@@ -711,7 +779,8 @@
       channel: null,
       supabase: null,
       isBusy: false,
-      isAdmin: false
+      isAdmin: false,
+      selectedSide: "pink"
     };
 
     function loadWallet() {
@@ -776,6 +845,13 @@
       const pinkTickets = formatShares(estimateTickets("pink", amount, state.market));
       const blueTickets = formatShares(estimateTickets("blue", amount, state.market));
       els.tradeHint.textContent = formatCurrency(amount) + " buys about " + pinkTickets + " Girl tickets or " + blueTickets + " Boy tickets.";
+      const possibleWin = state.selectedSide === "pink"
+        ? state.wallet.pinkShares + estimateTickets("pink", amount, state.market)
+        : state.wallet.blueShares + estimateTickets("blue", amount, state.market);
+      els.possibleWin.textContent = formatCurrency(possibleWin);
+      els.currentPick.textContent = sideLabel(state.selectedSide);
+      els.betPinkBtn.classList.toggle("active", state.selectedSide === "pink");
+      els.betBlueBtn.classList.toggle("active", state.selectedSide === "blue");
 
       document.querySelectorAll(".chip").forEach((chip) => {
         chip.classList.toggle("active", Number(chip.dataset.amount) === amount);
@@ -786,11 +862,13 @@
       const wallet = state.wallet;
       const totalShares = wallet.pinkShares + wallet.blueShares;
       els.userBalance.textContent = formatCurrency(wallet.balance);
+      els.quickBalance.textContent = formatCurrency(wallet.balance);
       els.totalShares.textContent = formatShares(totalShares);
       els.positionPink.textContent = formatShares(wallet.pinkShares);
       els.positionBlue.textContent = formatShares(wallet.blueShares);
       els.pinkShares.textContent = formatShares(wallet.pinkShares);
       els.blueShares.textContent = formatShares(wallet.blueShares);
+      updateTradeEstimates();
     }
 
     function renderMarket() {
@@ -857,6 +935,7 @@
 
     async function placeBet(side) {
       if (!state.market || state.market.revealed) return;
+      state.selectedSide = side;
       const amount = Number(els.betAmount.value);
 
       if (state.wallet.balance < amount) {
@@ -1001,6 +1080,14 @@
 
       els.betPinkBtn.addEventListener("click", () => placeBet("pink"));
       els.betBlueBtn.addEventListener("click", () => placeBet("blue"));
+      els.betPinkBtn.addEventListener("pointerenter", () => {
+        state.selectedSide = "pink";
+        updateTradeEstimates();
+      });
+      els.betBlueBtn.addEventListener("pointerenter", () => {
+        state.selectedSide = "blue";
+        updateTradeEstimates();
+      });
       els.adminUnlockBtn.addEventListener("click", unlockAdmin);
       els.revealPinkBtn.addEventListener("click", () => revealWinner("pink"));
       els.revealBlueBtn.addEventListener("click", () => revealWinner("blue"));

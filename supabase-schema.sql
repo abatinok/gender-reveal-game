@@ -64,8 +64,8 @@ begin
 
   select *
   into v_market
-  from public.market
-  where id = p_market_id
+  from public.market as m
+  where m.id = p_market_id
   for update;
 
   if not found then
@@ -88,20 +88,20 @@ begin
     v_shares_out := v_market.blue_pool - v_new_blue;
   end if;
 
-  update public.market
+  update public.market as m
   set
     pink_pool = v_new_pink,
     blue_pool = v_new_blue,
     updated_at = timezone('utc', now())
-  where id = p_market_id
+  where m.id = p_market_id
   returning
-    market.id,
-    market.pink_pool,
-    market.blue_pool,
-    market.revealed,
-    market.winner,
-    market.announcement,
-    market.updated_at,
+    m.id,
+    m.pink_pool,
+    m.blue_pool,
+    m.revealed,
+    m.winner,
+    m.announcement,
+    m.updated_at,
     v_shares_out
   into id, pink_pool, blue_pool, revealed, winner, announcement, updated_at, shares_out;
 
