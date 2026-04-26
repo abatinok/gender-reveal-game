@@ -847,7 +847,8 @@
       isBusy: false,
       isAdmin: false,
       selectedSide: "pink",
-      celebrationTimer: null
+      celebrationTimer: null,
+      revealTimer: null
     };
 
     function loadWallet() {
@@ -951,6 +952,10 @@
         clearTimeout(state.celebrationTimer);
         state.celebrationTimer = null;
       }
+      if (state.revealTimer) {
+        clearTimeout(state.revealTimer);
+        state.revealTimer = null;
+      }
 
       if (!state.market?.revealed || !state.market?.winner) {
         els.resultBanner.classList.remove("visible");
@@ -962,6 +967,10 @@
       const winner = sideLabel(String(state.market.winner));
       els.resultTitle.textContent = winner === "בת" ? "זו בת!" : "זה בן!";
       els.resultBanner.classList.add("visible");
+      state.revealTimer = setTimeout(() => {
+        els.resultBanner.classList.remove("visible");
+        state.revealTimer = null;
+      }, 3200);
       if (state.wallet.vote === state.market.winner) {
         els.celebrationBox.classList.remove("hidden");
         els.celebrationBox.classList.remove("active");
