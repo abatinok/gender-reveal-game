@@ -474,8 +474,9 @@
         linear-gradient(135deg, rgba(252, 247, 190, 0.22), rgba(220, 240, 170, 0.16));
       overflow: hidden;
       pointer-events: none;
-      z-index: 9999;
+      z-index: 9200;
       box-shadow: inset 0 0 120px rgba(255, 255, 255, 0.2);
+      opacity: 0.92;
     }
 
     .confetti-burst::before,
@@ -554,6 +555,8 @@
 
     .result-popup {
       min-width: min(92vw, 720px);
+      position: relative;
+      z-index: 9100;
       padding: 34px 28px;
       border-radius: 30px;
       border: 2px solid rgba(226, 200, 77, 0.5);
