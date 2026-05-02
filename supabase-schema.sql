@@ -53,6 +53,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_market        public.markets%ROWTYPE;
+  v_existing_pred public.predictions%ROWTYPE;
   v_options       JSONB;
   v_found         BOOLEAN := FALSE;
   v_chosen_pool   NUMERIC := 0;
@@ -66,8 +67,16 @@ DECLARE
   v_opt           JSONB;
   v_old_pool      NUMERIC;
   v_proportional  NUMERIC;
+  v_total_spent   NUMERIC := 0;
+  v_balance       NUMERIC := 0;
   v_result        JSONB;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext(p_user_id), hashtext('place_market_bet'));
+
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'Bet amount must be positive';
+  END IF;
+
   -- 1. Lock market row
   SELECT * INTO v_market
   FROM public.markets
@@ -83,7 +92,34 @@ BEGIN
     RAISE EXCEPTION 'Market is already revealed: %', p_market_slug;
   END IF;
 
-  -- 2. Validate: option_id exists
+  -- 3. Ignore duplicate bets on the same option before mutating market odds.
+  SELECT * INTO v_existing_pred
+  FROM public.predictions
+  WHERE user_id = p_user_id
+    AND market_slug = p_market_slug
+    AND option_id = p_option_id
+  FOR UPDATE;
+
+  IF FOUND THEN
+    SELECT row_to_json(m)::JSONB INTO v_result
+    FROM public.markets m
+    WHERE slug = p_market_slug;
+
+    RETURN v_result;
+  END IF;
+
+  -- 4. Enforce bankroll.
+  SELECT COALESCE(SUM(amount), 0) INTO v_total_spent
+  FROM public.predictions
+  WHERE user_id = p_user_id;
+
+  v_balance := 1000 - v_total_spent;
+
+  IF v_balance < p_amount THEN
+    RAISE EXCEPTION 'Insufficient balance: have %, need %', v_balance, p_amount;
+  END IF;
+
+  -- 5. Validate: option_id exists
   v_options := v_market.options;
   FOR v_i IN 0 .. jsonb_array_length(v_options) - 1 LOOP
     v_opt := v_options -> v_i;
@@ -146,9 +182,7 @@ BEGIN
   -- 6. Insert prediction (one row per user/market/option — re-clicking same option is a no-op)
   INSERT INTO public.predictions (user_id, nickname, market_slug, option_id, shares, amount)
   VALUES (p_user_id, p_nickname, p_market_slug, p_option_id, ROUND(v_shares_out, 6), p_amount)
-  ON CONFLICT (user_id, market_slug, option_id) DO UPDATE
-    SET nickname   = EXCLUDED.nickname,
-        updated_at = NOW();
+  ;
 
   -- 7. Return updated market
   SELECT row_to_json(m)::JSONB INTO v_result

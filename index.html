@@ -251,20 +251,19 @@
     }
 
     .mini-bar-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(82px, 110px) minmax(0, 1fr) 34px;
       align-items: center;
       gap: 6px;
       font-size: 0.74rem;
     }
 
     .mini-bar-label {
-      flex: 0 0 auto;
-      min-width: 38px;
+      min-width: 0;
       color: var(--muted);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 66px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.25;
     }
 
     .mini-bar-track {
@@ -283,7 +282,6 @@
     }
 
     .mini-bar-pct {
-      flex: 0 0 auto;
       min-width: 30px;
       text-align: left;
       color: var(--muted);
@@ -958,7 +956,8 @@
     const STORAGE_KEYS = {
       userId: 'baby-market-user-id',
       nickname: 'baby-market-nickname',
-      predictions: 'baby-market-predictions'
+      predictions: 'baby-market-predictions',
+      seenReveals: 'baby-market-seen-reveals'
     };
 
     // ══════════════════════════════════════════════════════════════════════
@@ -977,7 +976,10 @@
       channels: [],
       confettiNode: null,
       revealTimer: null,
-      betAmount: BET_AMOUNT
+      betAmount: BET_AMOUNT,
+      pendingBet: false,
+      seenReveals: {},
+      revealQueue: []
     };
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1051,6 +1053,19 @@
       localStorage.setItem(STORAGE_KEYS.predictions, JSON.stringify(APP.predictions));
     }
 
+    function loadSeenReveals() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.seenReveals);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveSeenReveals() {
+      localStorage.setItem(STORAGE_KEYS.seenReveals, JSON.stringify(APP.seenReveals));
+    }
+
     // Keyed as "slug:optionId" → {market_slug, option_id, shares, amount}
     function predKey(slug, optionId) { return `${slug}:${optionId}`; }
     function hasUserBet(slug, optionId) { return !!APP.predictions[predKey(slug, optionId)]; }
@@ -1083,6 +1098,23 @@
     function currentUserBalance() {
       const spent = Object.values(APP.predictions).reduce((s, p) => s + (Number(p.amount) || BET_AMOUNT), 0);
       return STARTING_COINS - spent;
+    }
+
+    function maxAffordableBet(balance = currentUserBalance()) {
+      return Math.max(BET_AMOUNT, Math.floor(Math.max(balance, 0) / BET_AMOUNT) * BET_AMOUNT);
+    }
+
+    function normalizeBetAmount() {
+      const balance = currentUserBalance();
+      if (balance < BET_AMOUNT) {
+        APP.betAmount = BET_AMOUNT;
+        return;
+      }
+      APP.betAmount = Math.min(APP.betAmount, maxAffordableBet(balance));
+    }
+
+    function canPlaceBet(amount) {
+      return Number.isFinite(amount) && amount >= BET_AMOUNT && currentUserBalance() >= amount;
     }
 
     function updateCoinDisplay() {
@@ -1137,6 +1169,60 @@
       }, 5500);
     }
 
+    function revealKey(market) {
+      if (!market?.revealed || !market?.winner) return null;
+      return `${market.slug}:${market.winner}:${market.updated_at || ''}`;
+    }
+
+    function hasSeenReveal(market) {
+      const key = revealKey(market);
+      return !!(key && APP.seenReveals[key]);
+    }
+
+    function markRevealSeen(market) {
+      const key = revealKey(market);
+      if (!key) return;
+      APP.seenReveals[key] = true;
+      saveSeenReveals();
+    }
+
+    function processRevealQueue() {
+      if (APP.revealTimer || APP.confettiNode || !APP.revealQueue.length) return;
+      const next = APP.revealQueue.shift();
+      if (!next) return;
+      markRevealSeen(next.market);
+      showRevealBanner(next.market, next.winnerOption);
+    }
+
+    function enqueueRevealCelebration(market, { priority = false } = {}) {
+      const key = revealKey(market);
+      if (!key || hasSeenReveal(market) || APP.revealQueue.some(item => item.key === key)) return;
+
+      const winnerOption = market.options?.find(o => o.id === market.winner);
+      if (!winnerOption) return;
+
+      const queueItem = {
+        key,
+        market: { ...market },
+        winnerOption: { ...winnerOption }
+      };
+
+      if (priority) {
+        APP.revealQueue.unshift(queueItem);
+      } else {
+        APP.revealQueue.push(queueItem);
+      }
+
+      processRevealQueue();
+    }
+
+    function replayMissedReveals() {
+      APP.markets
+        .filter(market => market.revealed && market.winner && !hasSeenReveal(market))
+        .sort((a, b) => new Date(a.updated_at || 0) - new Date(b.updated_at || 0))
+        .forEach(enqueueRevealCelebration);
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // Reveal Banner
     // ══════════════════════════════════════════════════════════════════════
@@ -1178,19 +1264,29 @@
         APP.revealTimer = null;
       }
       els.resultBanner.classList.remove('visible', 'winner-gold', 'winner-green');
+      setTimeout(processRevealQueue, 0);
     }
 
     function getOptionEmoji(marketSlug, optionId) {
-      // Special emojis for known markets
+      // Category-specific reveal emojis keyed to the live market slugs/options.
       const emojiMap = {
         'gender': { 'boy': '👦', 'girl': '👧' },
-        'hair': { 'bald': '👶', 'light': '👱', 'dark': '🧒' },
-        'eyes': { 'blue': '🔵', 'brown': '🟤', 'green': '🟢', 'other': '👁️' },
-        'birth_month': { 'aug': '☀️', 'sep': '🍂', 'oct': '🎃' },
-        'weight': { 'under3': '🪶', '3to33': '⚖️', '33to36': '⚖️', 'over36': '🏋️' },
-        'time_of_day': { 'morning': '🌅', 'afternoon': '☀️', 'evening': '🌆', 'night': '🌙' },
-        'day_of_week': { 'weekday': '📅', 'weekend': '🎉' },
-        'first_word': { 'ima': '👩', 'aba': '👨', 'other': '💬' }
+        'weight': { 'lt3': '🪶', '3to33': '⚖️', '33to36': '⚖️', '36to4': '🏋️', 'gt4': '🏋️' },
+        'eye-color': { 'blue': '🔵', 'brown': '🟤', 'green': '🟢', 'gray': '⚪' },
+        'name': { 'name1': '🪪', 'name2': '📛', 'name3': '✨' },
+        'birth-date': {
+          'oct10-16': '🍁',
+          'oct17-23': '🎃',
+          'oct24-30': '🗓️',
+          'oct31-nov6': '📅',
+          'nov7plus': '🍼'
+        },
+        'birth-time': { 'night': '🌙', 'morning': '🌅', 'noon': '☀️', 'evening': '🌆' },
+        'day-of-week': { 'sun': '☀️', 'mon': '💼', 'tue': '📘', 'wed': '🗓️', 'thu': '🌤️', 'fri': '🎉', 'sat': '🕯️' },
+        'hair-color': { 'black': '🖤', 'brown': '🤎', 'blonde': '💛', 'red': '🧡', 'bald': '👶' },
+        'length': { 'lt49': '📏', '49to51': '📐', '51to53': '📏', 'gt53': '📍' },
+        'looks-like': { 'mom': '👩', 'dad': '👨' },
+        'first-cry': { 'baby': '👶', 'mom': '🤱', 'dad': '👨', 'grandparents': '🧓' }
       };
       return emojiMap[marketSlug]?.[optionId] || '🎉';
     }
@@ -1286,6 +1382,7 @@
     }
 
     function renderMarketDetail() {
+      normalizeBetAmount();
       const market = APP.markets.find(m => m.slug === APP.currentMarket);
       if (!market) {
         els.detailCard.innerHTML = '<p>שוק לא נמצא</p>';
@@ -1315,6 +1412,7 @@
       }
 
       // Options sorted by popularity desc
+      const canAffordCurrentBet = canPlaceBet(APP.betAmount);
       const sortedOptIndices = probs.map((p, i) => i).sort((a, b) => probs[b] - probs[a]);
       const optionsHtml = sortedOptIndices.map(idx => {
         const opt = market.options[idx];
@@ -1325,7 +1423,7 @@
         let classes = 'option-btn';
         if (isSelected) classes += ' selected';
         if (isWinner) classes += ' winner';
-        const disabled = isRevealed ? 'disabled' : '';
+        const disabled = (isRevealed || APP.pendingBet || (!isSelected && !canAffordCurrentBet)) ? 'disabled' : '';
         const multDisplay = mult >= 2 ? `<span class="option-mult">×${mult.toFixed(1)}</span>` : '';
 
         return `
@@ -1408,10 +1506,16 @@
       if (!isRevealed) {
         els.detailCard.querySelectorAll('.option-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
+            if (APP.pendingBet) return;
             const optionId = btn.dataset.optionId;
             if (btn.classList.contains('selected')) {
               await unplaceBet(market.slug, optionId);
             } else {
+              if (!canPlaceBet(APP.betAmount)) {
+                alert('××™×Ÿ ×œ×š ×ž×¡×¤×™×§ ×ž×˜×‘×¢×•×ª ×œ×”×™×ž×•×¨ ×”×–×”');
+                renderMarketDetail();
+                return;
+              }
               await placeBet(market.slug, optionId, APP.betAmount);
             }
           });
@@ -1487,7 +1591,7 @@
       els.adminMarketsList.querySelectorAll('.admin-reveal-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const slug = btn.dataset.slug;
-          const select = document.getElementById(`admin-select-${slug}`);
+          const select = btn.closest('.admin-market-item')?.querySelector('.admin-select');
           const winnerId = select?.value;
           if (!winnerId) { alert('יש לבחור תשובה'); return; }
           await revealMarket(slug, winnerId);
@@ -1610,13 +1714,24 @@
         return;
       }
 
+      const numericAmount = Number(amount);
+      if (!canPlaceBet(numericAmount)) {
+        alert('××™×Ÿ ×œ×š ×ž×¡×¤×™×§ ×ž×˜×‘×¢×•×ª ×œ×”×™×ž×•×¨ ×”×–×”');
+        renderMarketDetail();
+        return;
+      }
+
+      if (APP.pendingBet) return;
+      APP.pendingBet = true;
+      renderMarketDetail();
+
       try {
         const { data, error } = await APP.supabase.rpc('place_market_bet', {
           p_market_slug: marketSlug,
           p_user_id: APP.userId,
           p_nickname: APP.nickname,
           p_option_id: optionId,
-          p_amount: amount
+          p_amount: numericAmount
         });
 
         if (error) throw error;
@@ -1632,7 +1747,7 @@
 
         // Optimistic local update; fetchUserPredictions syncs exact shares
         APP.predictions[predKey(marketSlug, optionId)] = {
-          market_slug: marketSlug, option_id: optionId, shares: 0, amount
+          market_slug: marketSlug, option_id: optionId, shares: 0, amount: numericAmount
         };
         savePredictions();
         updateCoinDisplay();
@@ -1645,6 +1760,9 @@
       } catch (err) {
         console.error('Error placing bet:', err);
         alert(err.message || 'אירעה שגיאה בביצוע הניחוש');
+      } finally {
+        APP.pendingBet = false;
+        renderMarketDetail();
       }
     }
 
@@ -1677,6 +1795,8 @@
       const winnerOption = market.options.find(o => o.id === winnerId);
       if (!winnerOption) return;
 
+      const revealedAt = new Date().toISOString();
+
       try {
         const { error } = await APP.supabase
           .from('markets')
@@ -1684,14 +1804,19 @@
             revealed: true,
             winner: winnerId,
             actual_value: winnerOption.label_he,
-            updated_at: new Date().toISOString()
+            updated_at: revealedAt
           })
           .eq('slug', marketSlug);
 
         if (error) throw error;
 
-        // Show reveal banner
-        showRevealBanner(market, winnerOption);
+        enqueueRevealCelebration({
+          ...market,
+          revealed: true,
+          winner: winnerId,
+          actual_value: winnerOption.label_he,
+          updated_at: revealedAt
+        }, { priority: true });
 
         // Refresh data
         await fetchMarkets();
@@ -1760,15 +1885,9 @@
                 APP.markets.push(updated);
               }
 
-              // If just revealed and we're viewing this market, show banner
+              // Celebrate reveals live for anyone currently connected.
               if (!wasRevealed && updated.revealed && updated.winner) {
-                const winnerOption = updated.options?.find(o => o.id === updated.winner);
-                if (winnerOption) {
-                  // Only show banner if we're on this market OR it's the first reveal
-                  if (APP.currentMarket === updated.slug || APP.currentView === 'grid') {
-                    showRevealBanner(updated, winnerOption);
-                  }
-                }
+                enqueueRevealCelebration(updated, { priority: true });
               }
             } else if (payload.eventType === 'INSERT') {
               APP.markets.push(payload.new);
@@ -1852,6 +1971,7 @@
       APP.userId = loadUserId();
       APP.nickname = loadNickname();
       APP.predictions = loadPredictions();
+      APP.seenReveals = loadSeenReveals();
       updateCoinDisplay();
 
       // Check if we need nickname
@@ -1872,6 +1992,8 @@
           fetchLeaderboard(),
           fetchUserPredictions()
         ]);
+
+        replayMissedReveals();
 
         // Setup realtime
         setupRealtime();
