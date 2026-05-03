@@ -1919,7 +1919,7 @@
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            els.connectionStatus.textContent = 'חיבור חי';
+            els.connectionStatus.textContent = 'מחובר לשרת';
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             els.connectionStatus.textContent = 'החיבור נותק';
           }
